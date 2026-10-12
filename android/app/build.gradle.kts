@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.video_share_poc"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

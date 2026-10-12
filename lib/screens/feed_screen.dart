@@ -16,6 +16,7 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   final VideoService _videoService = VideoService();
+  int _focusedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -88,8 +89,17 @@ class _FeedScreenState extends State<FeedScreen> {
           return PageView.builder(
             scrollDirection: Axis.vertical,
             itemCount: videos.length,
+            onPageChanged: (index) {
+              setState(() {
+                _focusedIndex = index;
+              });
+            },
             itemBuilder: (context, index) {
-              return VideoPlayerItem(video: videos[index]);
+              return VideoPlayerItem(
+                key: ValueKey(videos[index].id),
+                video: videos[index],
+                isFocused: _focusedIndex == index,
+              );
             },
           );
         },
@@ -100,8 +110,13 @@ class _FeedScreenState extends State<FeedScreen> {
 
 class VideoPlayerItem extends StatefulWidget {
   final VideoModel video;
+  final bool isFocused;
 
-  const VideoPlayerItem({super.key, required this.video});
+  const VideoPlayerItem({
+    super.key,
+    required this.video,
+    required this.isFocused,
+  });
 
   @override
   State<VideoPlayerItem> createState() => _VideoPlayerItemState();
@@ -117,9 +132,27 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.video.videoUrl))
       ..initialize().then((_) {
         _controller.setLooping(true);
-        _controller.play();
-        setState(() {});
+        if (widget.isFocused) {
+          _controller.play();
+        } else {
+          _controller.pause();
+        }
+        if (mounted) setState(() {});
       });
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoPlayerItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_controller.value.isInitialized) {
+      if (widget.isFocused) {
+        _controller.play();
+        _isPlaying = true;
+      } else {
+        _controller.pause();
+        _isPlaying = false;
+      }
+    }
   }
 
   @override
@@ -158,7 +191,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
             const Center(child: CircularProgressIndicator(color: Colors.white)),
 
           // Play / Pause Icon overlay
-          if (!_isPlaying)
+          if (!_isPlaying && _controller.value.isInitialized)
             const Center(
               child: Icon(Icons.play_circle_fill, size: 70, color: Colors.white70),
             ),

@@ -95,7 +95,7 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!mounted) return;
 
       // Navigate to preview and upload screen
-      await Navigator.of(context).push(
+      final uploaded = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
           builder: (_) => PreviewUploadScreen(
             videoPath: file.path,
@@ -103,6 +103,11 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
         ),
       );
+
+      if (uploaded == true && mounted) {
+        // Return to the feed screen
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

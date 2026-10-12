@@ -69,8 +69,8 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
         const SnackBar(content: Text('Video uploaded successfully!')),
       );
 
-      // Pop back to the main feed
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // Pop back to the main feed screen
+      Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isUploading = false);
@@ -87,7 +87,10 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text('Preview & Post', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: _isUploading ? null : () => Navigator.of(context).pop(false),
+        ),
       ),
       body: Stack(
         fit: StackFit.expand,
