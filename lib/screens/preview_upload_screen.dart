@@ -23,7 +23,6 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
   final VideoService _videoService = VideoService();
 
   bool _isUploading = false;
-  double _uploadProgress = 0.0;
 
   @override
   void initState() {
@@ -46,27 +45,16 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
   Future<void> _uploadVideo() async {
     setState(() {
       _isUploading = true;
-      _uploadProgress = 0.0;
     });
 
     try {
       final videoId = DateTime.now().millisecondsSinceEpoch.toString();
-      final uploadTask = _videoService.uploadVideoFile(
+      
+      // Upload to Supabase Storage
+      final downloadUrl = await _videoService.uploadVideoToSupabase(
         file: File(widget.videoPath),
         videoId: videoId,
       );
-
-      // Track upload progress
-      uploadTask.snapshotEvents.listen((event) {
-        if (event.totalBytes > 0) {
-          setState(() {
-            _uploadProgress = event.bytesTransferred / event.totalBytes;
-          });
-        }
-      });
-
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
 
       // Save video record to Firestore
       await _videoService.saveVideoMetadata(
@@ -150,15 +138,14 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
                     ),
                     const SizedBox(height: 16),
                     if (_isUploading) ...[
-                      LinearProgressIndicator(
-                        value: _uploadProgress,
+                      const LinearProgressIndicator(
                         backgroundColor: Colors.white24,
                         color: Colors.amber,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Uploading: ${(_uploadProgress * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(color: Colors.white),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Uploading video to cloud...',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ] else
                       SizedBox(

@@ -1,15 +1,14 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/video_model.dart';
 
 class VideoService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Stream of community videos for the feed
+  // Stream of community videos from Firestore
   Stream<List<VideoModel>> getVideosFeed() {
     return _firestore
         .collection('videos')
@@ -19,16 +18,27 @@ class VideoService {
             snapshot.docs.map((doc) => VideoModel.fromFirestore(doc)).toList());
   }
 
-  // Upload video file with progress callback
-  UploadTask uploadVideoFile({
+  // Upload video file directly to Supabase Storage bucket ('videos')
+  Future<String> uploadVideoToSupabase({
     required File file,
     required String videoId,
-  }) {
-    final storageRef = _storage.ref().child('videos/$videoId.mp4');
-    return storageRef.putFile(
+  }) async {
+    final fileName = '$videoId.mp4';
+    final storage = Supabase.instance.client.storage.from('videos');
+
+    // Upload file
+    await storage.upload(
+      fileName,
       file,
-      SettableMetadata(contentType: 'video/mp4'),
+      fileOptions: const FileOptions(
+        contentType: 'video/mp4',
+        upsert: true,
+      ),
     );
+
+    // Get public URL
+    final publicUrl = storage.getPublicUrl(fileName);
+    return publicUrl;
   }
 
   // Save video record to Firestore

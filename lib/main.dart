@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'firebase_options.dart';
 import 'screens/feed_screen.dart';
 
@@ -28,6 +29,16 @@ Future<void> main() async {
     }
   } catch (e) {
     debugPrint('Firebase initialization note: $e');
+  }
+
+  // Initialize Supabase Storage
+  try {
+    await Supabase.initialize(
+      url: 'https://fayyujfeqsmiohegdzuk.supabase.co',
+      publishableKey: 'sb_publishable_yjS_RNeKNMFWjRYeeYghrw_wT-PEtDC',
+    );
+  } catch (e) {
+    debugPrint('Supabase initialization note: $e');
   }
 
   runApp(const MyApp());
