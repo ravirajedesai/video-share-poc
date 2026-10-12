@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
 import 'screens/feed_screen.dart';
 
 List<CameraDescription> cameras = [];
@@ -16,9 +17,11 @@ Future<void> main() async {
     debugPrint('Failed to load cameras: $e');
   }
 
-  // Initialize Firebase (Ensure google-services.json / GoogleService-Info.plist are configured)
+  // Initialize Firebase with generated platform options
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     // Sign in anonymously for PoC if not already logged in
     if (FirebaseAuth.instance.currentUser == null) {
       await FirebaseAuth.instance.signInAnonymously();
