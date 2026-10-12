@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'firebase_options.dart';
-import 'screens/feed_screen.dart';
+import 'screens/home_screen.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -58,7 +58,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.black,
         useMaterial3: true,
       ),
-      home: FeedScreen(cameras: cameras),
+      home: HomeScreen(cameras: cameras),
     );
   }
 }
