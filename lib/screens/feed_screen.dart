@@ -91,28 +91,32 @@ class _FeedScreenState extends State<FeedScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: GestureDetector(
           onLongPress: _promptAdminMode, // Secret long-press on title to toggle Admin mode
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Community Videos',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              if (_isAdmin) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'ADMIN',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Community Videos',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
+                if (_isAdmin) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'ADMIN',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         actions: [
