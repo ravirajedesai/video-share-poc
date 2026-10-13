@@ -1,8 +1,24 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_compress/video_compress.dart';
 import '../models/video_model.dart';
+
+class VideoProcessingResult {
+  final File compressedVideo;
+  final File thumbnailFile;
+  final int originalSize;
+  final int compressedSize;
+
+  VideoProcessingResult({
+    required this.compressedVideo,
+    required this.thumbnailFile,
+    required this.originalSize,
+    required this.compressedSize,
+  });
+}
 
 class VideoService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -18,6 +34,41 @@ class VideoService {
             snapshot.docs.map((doc) => VideoModel.fromFirestore(doc)).toList());
   }
 
+  // Compress video and generate a real image thumbnail
+  Future<VideoProcessingResult> compressAndGenerateThumbnail(File rawVideoFile) async {
+    final originalSize = await rawVideoFile.length();
+
+    // 1. Generate thumbnail image (.jpg)
+    final thumbnailFile = await VideoCompress.getFileThumbnail(
+      rawVideoFile.path,
+      quality: 75,
+      position: -1, // extracts middle frame
+    );
+
+    // 2. Compress video (medium quality, keeps 1080/720p crisp with ~60-80% smaller size)
+    final mediaInfo = await VideoCompress.compressVideo(
+      rawVideoFile.path,
+      quality: VideoQuality.MediumQuality,
+      deleteOrigin: false,
+      includeAudio: true,
+    );
+
+    final compressedFile = mediaInfo?.file ?? rawVideoFile;
+    final compressedSize = await compressedFile.length();
+
+    debugPrint(
+      'Video compressed from ${(originalSize / (1024 * 1024)).toStringAsFixed(1)} MB '
+      'to ${(compressedSize / (1024 * 1024)).toStringAsFixed(1)} MB',
+    );
+
+    return VideoProcessingResult(
+      compressedVideo: compressedFile,
+      thumbnailFile: thumbnailFile,
+      originalSize: originalSize,
+      compressedSize: compressedSize,
+    );
+  }
+
   // Upload video file directly to Supabase Storage bucket ('videos')
   Future<String> uploadVideoToSupabase({
     required File file,
@@ -26,7 +77,6 @@ class VideoService {
     final fileName = '$videoId.mp4';
     final storage = Supabase.instance.client.storage.from('videos');
 
-    // Upload file
     await storage.upload(
       fileName,
       file,
@@ -36,14 +86,33 @@ class VideoService {
       ),
     );
 
-    // Get public URL
-    final publicUrl = storage.getPublicUrl(fileName);
-    return publicUrl;
+    return storage.getPublicUrl(fileName);
+  }
+
+  // Upload thumbnail image directly to Supabase Storage bucket ('videos')
+  Future<String> uploadThumbnailToSupabase({
+    required File file,
+    required String videoId,
+  }) async {
+    final fileName = '${videoId}_thumb.jpg';
+    final storage = Supabase.instance.client.storage.from('videos');
+
+    await storage.upload(
+      fileName,
+      file,
+      fileOptions: const FileOptions(
+        contentType: 'image/jpeg',
+        upsert: true,
+      ),
+    );
+
+    return storage.getPublicUrl(fileName);
   }
 
   // Save video record to Firestore
   Future<void> saveVideoMetadata({
     required String videoUrl,
+    required String thumbnailUrl,
     required String caption,
     required int durationSeconds,
   }) async {
@@ -53,10 +122,16 @@ class VideoService {
     await _firestore.collection('videos').add({
       'userId': userId,
       'videoUrl': videoUrl,
+      'thumbnailUrl': thumbnailUrl,
       'caption': caption,
       'durationSeconds': durationSeconds,
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'published',
     });
+  }
+
+  // Cancel any running compression operations
+  Future<void> cancelCompression() async {
+    await VideoCompress.cancelCompression();
   }
 }

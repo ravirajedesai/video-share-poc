@@ -22,7 +22,8 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
   final TextEditingController _captionController = TextEditingController();
   final VideoService _videoService = VideoService();
 
-  bool _isUploading = false;
+  bool _isProcessing = false;
+  String _statusMessage = '';
 
   @override
   void initState() {
@@ -42,23 +43,41 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
     super.dispose();
   }
 
-  Future<void> _uploadVideo() async {
+  Future<void> _processAndUploadVideo() async {
     setState(() {
-      _isUploading = true;
+      _isProcessing = true;
+      _statusMessage = 'Optimizing & generating thumbnail...';
     });
 
     try {
+      final rawFile = File(widget.videoPath);
+
+      // 1. Compress video and extract high quality thumbnail frame
+      final result = await _videoService.compressAndGenerateThumbnail(rawFile);
+
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = 'Uploading video & thumbnail to cloud...';
+      });
+
       final videoId = DateTime.now().millisecondsSinceEpoch.toString();
-      
-      // Upload to Supabase Storage
-      final downloadUrl = await _videoService.uploadVideoToSupabase(
-        file: File(widget.videoPath),
+
+      // 2. Upload thumbnail image (.jpg)
+      final thumbnailUrl = await _videoService.uploadThumbnailToSupabase(
+        file: result.thumbnailFile,
         videoId: videoId,
       );
 
-      // Save video record to Firestore
+      // 3. Upload compressed video (.mp4)
+      final videoUrl = await _videoService.uploadVideoToSupabase(
+        file: result.compressedVideo,
+        videoId: videoId,
+      );
+
+      // 4. Save video record with thumbnail URL to Firestore
       await _videoService.saveVideoMetadata(
-        videoUrl: downloadUrl,
+        videoUrl: videoUrl,
+        thumbnailUrl: thumbnailUrl,
         caption: _captionController.text.trim(),
         durationSeconds: widget.durationSeconds,
       );
@@ -66,14 +85,19 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video uploaded successfully!')),
+        SnackBar(
+          content: Text(
+            'Uploaded! Saved ${((1 - result.compressedSize / result.originalSize) * 100).toStringAsFixed(0)}% space.',
+          ),
+          backgroundColor: Colors.green,
+        ),
       );
 
       // Pop back to the main feed screen
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isUploading = false);
+      setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Upload failed: $e')),
       );
@@ -89,7 +113,7 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
         title: const Text('Preview & Post', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _isUploading ? null : () => Navigator.of(context).pop(false),
+          onPressed: _isProcessing ? null : () => Navigator.of(context).pop(false),
         ),
       ),
       body: Stack(
@@ -137,32 +161,33 @@ class _PreviewUploadScreenState extends State<PreviewUploadScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      enabled: !_isUploading,
+                      enabled: !_isProcessing,
                     ),
                     const SizedBox(height: 16),
-                    if (_isUploading) ...[
+                    if (_isProcessing) ...[
                       const LinearProgressIndicator(
                         backgroundColor: Colors.white24,
                         color: Colors.amber,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Uploading video to cloud...',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      Text(
+                        _statusMessage,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ] else
                       SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: ElevatedButton(
+                        child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.amber,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: _uploadVideo,
-                          child: const Text(
+                          onPressed: _processAndUploadVideo,
+                          icon: const Icon(Icons.cloud_upload_rounded, color: Colors.black),
+                          label: const Text(
                             'Post Video',
                             style: TextStyle(
                               color: Colors.black,

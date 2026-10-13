@@ -4,6 +4,7 @@ class VideoModel {
   final String id;
   final String userId;
   final String videoUrl;
+  final String thumbnailUrl;
   final String caption;
   final DateTime createdAt;
   final int durationSeconds;
@@ -12,6 +13,7 @@ class VideoModel {
     required this.id,
     required this.userId,
     required this.videoUrl,
+    required this.thumbnailUrl,
     required this.caption,
     required this.createdAt,
     required this.durationSeconds,
@@ -23,6 +25,7 @@ class VideoModel {
       id: doc.id,
       userId: data['userId'] as String? ?? 'anonymous',
       videoUrl: data['videoUrl'] as String? ?? '',
+      thumbnailUrl: data['thumbnailUrl'] as String? ?? '',
       caption: data['caption'] as String? ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       durationSeconds: (data['durationSeconds'] as num?)?.toInt() ?? 0,
@@ -33,10 +36,11 @@ class VideoModel {
     return {
       'userId': userId,
       'videoUrl': videoUrl,
+      'thumbnailUrl': thumbnailUrl,
       'caption': caption,
       'createdAt': FieldValue.serverTimestamp(),
       'durationSeconds': durationSeconds,
-      'status': 'published', // PoC direct publish
+      'status': 'published',
     };
   }
 }
