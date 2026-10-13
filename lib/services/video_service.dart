@@ -130,6 +130,36 @@ class VideoService {
     });
   }
 
+  // Get current user ID
+  String get currentUserId => _auth.currentUser?.uid ?? '';
+
+  // Delete video from both Firestore and Supabase Storage
+  Future<void> deleteVideo({
+    required String videoId,
+    required String videoUrl,
+    required String thumbnailUrl,
+  }) async {
+    // 1. Delete document from Firestore
+    await _firestore.collection('videos').doc(videoId).delete();
+
+    // 2. Delete files from Supabase Storage
+    try {
+      final storage = Supabase.instance.client.storage.from('videos');
+      final videoFileName = videoUrl.split('/').last.split('?').first;
+      final thumbFileName = thumbnailUrl.split('/').last.split('?').first;
+
+      final filesToRemove = <String>[];
+      if (videoFileName.isNotEmpty) filesToRemove.add(videoFileName);
+      if (thumbFileName.isNotEmpty) filesToRemove.add(thumbFileName);
+
+      if (filesToRemove.isNotEmpty) {
+        await storage.remove(filesToRemove);
+      }
+    } catch (e) {
+      debugPrint('Storage cleanup note: $e');
+    }
+  }
+
   // Cancel any running compression operations
   Future<void> cancelCompression() async {
     await VideoCompress.cancelCompression();

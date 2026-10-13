@@ -17,6 +17,69 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   final VideoService _videoService = VideoService();
+  bool _isAdmin = false;
+
+  void _promptAdminMode() {
+    final pinController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF222222),
+        title: const Text('Admin Mode', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter Admin PIN to enable deletion of any video:',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'PIN (default: 1234)',
+                hintStyle: TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white10,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            onPressed: () {
+              if (pinController.text.trim() == '1234') {
+                setState(() => _isAdmin = !_isAdmin);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      _isAdmin ? 'Admin mode enabled: You can delete any video' : 'Admin mode disabled',
+                    ),
+                    backgroundColor: _isAdmin ? Colors.redAccent : Colors.grey,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Incorrect PIN')),
+                );
+              }
+            },
+            child: const Text('Confirm', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +89,31 @@ class _FeedScreenState extends State<FeedScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Community Videos',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: GestureDetector(
+          onLongPress: _promptAdminMode, // Secret long-press on title to toggle Admin mode
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Community Videos',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              if (_isAdmin) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'ADMIN',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -113,7 +198,10 @@ class _FeedScreenState extends State<FeedScreen> {
                     // Open and play only THIS video
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => SingleVideoPlayerScreen(video: video),
+                        builder: (_) => SingleVideoPlayerScreen(
+                          video: video,
+                          isAdmin: _isAdmin,
+                        ),
                       ),
                     );
                   },
